@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+    app:
+      container_name: "php_legacy_dev"
+      build:
+        context: .
+        dockerfile: ./Dockerfile
+      volumes:
+        - ./tests:/var/www/html
+      ports:
+        - 80:80
+      depends_on:
+        - memcached
+      env_file:
+        - ./.env
+      networks:
+        - php-memcached-network
+
+    memcached:
+      container_name: "php_legacy_memcached"
+      image: memcached:1.6-alpine
+      restart: always
+      ports:
+        - '11211:11211'
+      command: memcached -m 64 -vv
+      networks:
+        - php-memcached-network
+
+networks:
+  php-memcached-network:
+    driver: bridge
+    name: "php_legacy_network"

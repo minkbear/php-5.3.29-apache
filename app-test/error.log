@@ -1,0 +1,3 @@
+[2024-10-16 10:00:00] ERROR: Test error log - SHOULD BE BLOCKED
+[2024-10-16 10:00:01] WARNING: Database connection failed
+[2024-10-16 10:00:02] CRITICAL: Security breach detected

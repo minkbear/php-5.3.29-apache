@@ -7,9 +7,9 @@ services:
         context: .
         dockerfile: ./Dockerfile
       volumes:
-        - ./tests:/var/www/html
+        - ./app-test:/var/www/html
       ports:
-        - 80:80
+        - 8080:80
       depends_on:
         - memcached
       env_file:

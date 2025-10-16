@@ -1,0 +1,7 @@
+{
+    "name": "test/project",
+    "description": "Test composer.json - SHOULD BE BLOCKED",
+    "require": {
+        "php": ">=5.3.0"
+    }
+}

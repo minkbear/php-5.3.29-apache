@@ -21,7 +21,7 @@ RUN { \
     } >> /usr/local/etc/php/conf.d/00-php.ini
 
 # Configure Apache DocumentRoot
-RUN sed -i 's|/var/www/html|/app|g' /etc/apache2/sites-available/000-default.conf && \
+RUN sed -i 's|/var/www/html|/var/www/html|g' /etc/apache2/sites-available/000-default.conf && \
     echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Enable Apache rewrite module

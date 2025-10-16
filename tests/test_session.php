@@ -4,6 +4,9 @@
  * ทดสอบการทำงานของ session กับ Memcache
  */
 
+// ตั้งค่า UTF-8 encoding
+header('Content-Type: text/html; charset=UTF-8');
+
 // เริ่มต้น session
 session_start();
 

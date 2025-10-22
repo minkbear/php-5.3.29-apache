@@ -190,13 +190,22 @@ fi
 echo -e "${YELLOW}[6/6] Quick test...${NC}"
 echo "Testing image startup..."
 CONTAINER_ID=$(docker run -d --rm "${FULL_IMAGE_NAME}:${VERSION_TAG}")
-sleep 3
+echo "Waiting for container to start..."
+sleep 5
 
-if docker ps | grep -q "$CONTAINER_ID"; then
+# Check container status
+if docker ps --no-trunc | grep -q "$CONTAINER_ID"; then
     echo -e "${GREEN}✓ Container started successfully${NC}"
-    docker stop "$CONTAINER_ID" > /dev/null 2>&1
+    echo "Stopping test container..."
+    if docker stop "$CONTAINER_ID" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ Test container stopped${NC}"
+    else
+        echo -e "${YELLOW}⚠ Container may have already stopped${NC}"
+    fi
 else
     echo -e "${RED}✗ Container failed to start${NC}"
+    echo "Checking logs..."
+    docker logs "$CONTAINER_ID" 2>&1 || true
 fi
 echo ""
 

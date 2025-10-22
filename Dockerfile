@@ -8,26 +8,31 @@ COPY --from=memcache-source /usr/lib/php5/20090626/memcache.so /usr/local/lib/ph
 COPY --from=memcache-source /etc/php5/conf.d/memcache.ini /usr/local/etc/php/conf.d/memcache.ini
 
 ENV SESSION_SAVE_HANDLER=memcache \
-    SESSION_SAVE_PATH="tcp://memcached:11211"
+    SESSION_SAVE_PATH="tcp://memcached:11211" \
+    LOG_OUTPUT_LEVEL=error \
+    PHP_DISPLAY_ERRORS=off \
+    PHP_ERROR_REPORTING="E_ALL"
 
-# Configure PHP settings (OWASP security hardening)
-RUN { \
-    echo "short_open_tag = On"; \
-    echo "expose_php = Off"; \
-    echo "error_reporting = E_ALL"; \
-    echo "display_errors = Off"; \
-    echo "display_startup_errors = Off"; \
-    echo "log_errors = On"; \
-    echo "ignore_repeated_errors = Off"; \
-    echo "register_globals = On"; \
-    echo "session.save_handler = \${SESSION_SAVE_HANDLER}"; \
-    echo "session.save_path = \${SESSION_SAVE_PATH}"; \
-    echo "session.gc_probability = 1"; \
-    } >> /usr/local/etc/php/conf.d/00-php.ini
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Configure Apache DocumentRoot
+# Configure Apache DocumentRoot and Logging
 RUN sed -i 's|/var/www/html|/var/www/html|g' /etc/apache2/sites-available/000-default.conf && \
-    echo "ServerName localhost" >> /etc/apache2/apache2.conf
+    echo "ServerName localhost" >> /etc/apache2/apache2.conf && \
+    { \
+        echo ""; \
+        echo "# CustomLog directive to conditionally log requests"; \
+        echo "LogFormat \"%l %u %t %v %a \\\"%r\\\" %>s %b\" comonvhost"; \
+        echo "CustomLog /dev/stdout comonvhost env=!dontlog"; \
+        echo ""; \
+        echo "# Configure Log Settings"; \
+        echo "ErrorLog /dev/stderr"; \
+        echo "LogLevel error"; \
+        echo ""; \
+        echo "# Disable Server Signature for increased security"; \
+        echo "ServerSignature Off"; \
+    } >> /etc/apache2/apache2.conf
 
 # Enable Apache rewrite module
 RUN a2enmod rewrite
@@ -81,5 +86,6 @@ WORKDIR /var/www/html
 # Expose Apache port
 EXPOSE 80
 
-# Start Apache
+# Set entrypoint and default command
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["apache2-foreground"]

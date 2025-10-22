@@ -27,9 +27,10 @@
 ### Security Hardening (OWASP Compliant)
 - ✅ **PHP Security Configuration**
   - `expose_php = Off` - Hide PHP version
-  - `display_errors = Off` - Don't show errors to users
+  - `short_open_tag = On` - ⚠️ Enable for legacy code compatibility
+  - `display_errors = Off` (default) - Don't show errors in production
   - `log_errors = On` - Log errors for debugging
-  - `register_globals = Off` - Prevent security vulnerabilities
+  - `register_globals = On` - ⚠️ **SECURITY RISK** - Required for legacy apps only
 
 - ✅ **Apache Security Features**
   - Sensitive file protection (.env, .git, composer files)
@@ -62,6 +63,26 @@ docker run -d -p 8080:80 \
 
 ### Using Docker Compose
 
+**1. Create `.env` file for runtime configuration:**
+
+```env
+# .env - Development configuration
+APP_ENV=development
+
+# PHP Settings (override defaults)
+PHP_DISPLAY_ERRORS=on
+PHP_ERROR_REPORTING=E_ALL
+
+# Session Configuration
+SESSION_SAVE_HANDLER=memcache
+SESSION_SAVE_PATH=tcp://memcached:11211
+
+# Logging
+LOG_OUTPUT_LEVEL=error
+```
+
+**2. Create `docker-compose.yml`:**
+
 ```yaml
 version: '3.8'
 
@@ -72,9 +93,8 @@ services:
       - "8080:80"
     volumes:
       - ./app:/var/www/html
-    environment:
-      - SESSION_SAVE_HANDLER=memcache
-      - SESSION_SAVE_PATH=tcp://memcached:11211
+    env_file:
+      - ./.env
     depends_on:
       - memcached
 
@@ -84,12 +104,15 @@ services:
       - "11211:11211"
 ```
 
-Then run:
+**3. Start the services:**
+
 ```bash
 docker-compose up -d
 ```
 
 Access your application at: http://localhost:8080
+
+**Note:** PHP configuration is generated at runtime from `.env` variables. For production, use `PHP_DISPLAY_ERRORS=off`.
 
 ## 🛡️ Security Features
 
@@ -300,20 +323,41 @@ curl -I http://localhost:8080/index.php     # Should return 200
 |----------|---------|-------------|
 | `SESSION_SAVE_HANDLER` | `memcache` | Session handler (files/memcache) |
 | `SESSION_SAVE_PATH` | `tcp://memcached:11211` | Session save path |
+| `PHP_DISPLAY_ERRORS` | `off` | Display errors in browser (on/off) |
+| `PHP_ERROR_REPORTING` | `E_ALL` | PHP error reporting level |
+| `LOG_OUTPUT_LEVEL` | `error` | Apache/PHP log output level |
 
 ### PHP Configuration
 
-Custom PHP settings are in `/usr/local/etc/php/conf.d/00-php.ini`:
+PHP settings are **generated at runtime** from environment variables via `/usr/local/bin/docker-entrypoint.sh`.
+
+Default configuration in `/usr/local/etc/php/conf.d/00-php.ini`:
 
 ```ini
-short_open_tag = Off
+short_open_tag = On
 expose_php = Off
-error_reporting = E_ALL
-display_errors = Off
+error_reporting = E_ALL          # From ${PHP_ERROR_REPORTING}
+display_errors = off             # From ${PHP_DISPLAY_ERRORS}
 display_startup_errors = Off
 log_errors = On
+error_log = /dev/stderr
 ignore_repeated_errors = Off
-register_globals = Off
+register_globals = On            # ⚠️ Legacy compatibility only
+date.timezone = Asia/Bangkok
+session.save_handler = memcache  # From ${SESSION_SAVE_HANDLER}
+session.save_path = tcp://memcached:11211  # From ${SESSION_SAVE_PATH}
+```
+
+**Override via `.env` file:**
+
+```env
+# Development: Show errors
+PHP_DISPLAY_ERRORS=on
+PHP_ERROR_REPORTING=E_ALL
+
+# Production: Hide errors (default)
+PHP_DISPLAY_ERRORS=off
+PHP_ERROR_REPORTING=E_ALL
 ```
 
 ### Apache Configuration
@@ -354,11 +398,15 @@ open https://hub.docker.com/r/minkbear/php-5.3.29-apache
 ```
 .
 ├── Dockerfile                      # Main Docker image definition
+├── docker-entrypoint.sh           # Runtime configuration script
 ├── docker-compose.yml              # Docker Compose configuration
+├── .env                           # Runtime environment variables
 ├── build-and-push.sh              # Build and push script
 ├── .env.docker                    # Build configuration
 ├── README.md                      # This file
 ├── BUILD.md                       # Detailed build instructions
+├── app-test/                      # Test application files
+│   └── test-error.php             # PHP error testing
 └── tests/
     ├── security-test.sh           # Security test suite
     ├── run-tests.sh               # Automated test runner
